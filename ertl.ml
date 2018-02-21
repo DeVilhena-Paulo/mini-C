@@ -17,7 +17,7 @@ open Ertltree
 (* Global variables                                                                     *)
 (* ------------------------------------------------------------------------------------ *)
 
-(* Control flow graph for each function *)
+(* Control flow graph *)
 let graph = ref Label.M.empty
 
 let generate i =

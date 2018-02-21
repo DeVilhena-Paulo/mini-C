@@ -20,7 +20,7 @@ open Register
 (* Global variables                                                                     *)
 (* ------------------------------------------------------------------------------------ *)
 
-(* Control flow graph for each function                                                 *)
+(* Control flow graph                                                                   *)
 (* It consists of a mapping between labels and instructions. A label identifies one and *)
 (* only one instruction and one instruction stores zero, one or two next labels, which  *)
 (* indentify in their turn the next instruction to be executed.                         *)
@@ -43,7 +43,7 @@ let var_register id = Hashtbl.find registers id
 (* ------------------------------------------------------------------------------------ *)
 (* Traslation of an expression                                                          *)
 (*                                                                                      *)
-(* Much of the work have already been done in the Ops module. Here we only orchestrate  *)
+(* Much of the work has already been done in the Ops module. Here we only orchestrate   *)
 (* the flow by creating pseudo-registers, moving values between them and updating the   *)
 (* control flow graph (CFG)                                                             *)
 (* ------------------------------------------------------------------------------------ *)
@@ -159,7 +159,7 @@ let deffun ({ fun_name; fun_formals; fun_locals; fun_body } : Ops.decl_fun) =
 
 
 (* ------------------------------------------------------------------------------------ *)
-(* Translation of a function                                                            *)
+(* Translation of a program                                                             *)
 (* ------------------------------------------------------------------------------------ *)
 
 let program ({ funs } : Ops.file) = { funs = List.map deffun funs }
