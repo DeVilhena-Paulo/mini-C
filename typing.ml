@@ -5,7 +5,6 @@
 
 open Ttree
 open Ptree
-open Lexing
 
 
 (* ------------------------------------------------------------------------------------ *)
@@ -38,8 +37,9 @@ let format_error = function
   | NumberOfArgs -> "incorrect number of arguments"
   | Inconsistency -> "inconsistent type"
   
-let add_position s ({ pos_fname; pos_lnum; pos_bol; pos_cnum }, _) =
-  let line, column = string_of_int pos_lnum, string_of_int (pos_cnum - pos_bol) in
+let add_position s (l, _) =
+  let line, column =
+    string_of_int l.Lexing.pos_lnum, string_of_int (l.Lexing.pos_cnum - l.Lexing.pos_bol) in
   (s ^ "; line: " ^ line ^ ", column: " ^ column)
 
 let error_msg s id_loc = raise (Error (add_position (format_error s) id_loc))
@@ -131,6 +131,14 @@ module Env =
       let var_env = check_vars env decl_list in      
       Hashtbl.iter (fun key _ -> Hashtbl.remove env.var_env key) var_env
 
+    let find env id = Hashtbl.find_opt env id
+
+    let find_struct { struct_env; _ } id = find struct_env id
+
+    let find_var { var_env; _ } id = find var_env id
+
+    let find_fun { fun_env; _ } id = find fun_env id
+
   end
 
       
@@ -142,7 +150,6 @@ let build_expr expr_node expr_typ =
   { expr_node; expr_typ }
 
 let rec texpr env e =
-  let open Env in
   match e.expr_node with
   | Ptree.Econst i ->
      let expr_typ = if i = Int32.zero then Ttree.Ttypenull else Ttree.Tint in
@@ -153,7 +160,7 @@ let rec texpr env e =
      begin match lval with
      | Ptree.Lident { id; id_loc } ->
         let expr_typ =
-          match (Hashtbl.find_opt env.var_env id) with
+          match (Env.find_var env id) with
           | Some t -> t
           | None -> error_msg (Undefinition ("variable", id)) id_loc in
         let expr_node = Ttree.Eaccess_local id in
@@ -201,7 +208,7 @@ let rec texpr env e =
        
   | Ptree.Ecall ({ id; id_loc }, expr_list) ->
      let expr_list' = List.map (texpr env) expr_list in
-     begin match Hashtbl.find_opt env.fun_env id with
+     begin match Env.find_fun env id with
      | Some (fun_typ, fun_formals) ->
         let aux ((continue, _) as acc) (e, (f_typ, _)) =
           if not continue then acc
@@ -214,7 +221,7 @@ let rec texpr env e =
      | None -> error_msg (Undefinition ("function", id)) id_loc end
        
   | Ptree.Esizeof { id; id_loc } ->
-     match Hashtbl.find_opt env.struct_env id with
+     match Env.find_struct env id with
      | Some s -> (build_expr (Ttree.Esizeof s) Ttree.Tint)
      | None -> error_msg (Undefinition ("struct", id)) id_loc
 
@@ -273,11 +280,9 @@ let tdecl env = function
 (* ------------------------------------------------------------------------------------ *)
 
 let program p =
-  let remove_opt l =
-    let aux acc = function
-      | Some f -> f :: acc
-      | None -> acc in
-    List.rev (List.fold_left aux [] l) in
-  let env = Env.create 13 in
-  { funs = remove_opt (List.map (tdecl env) p) }
+  let filter_map l ~f =
+    List.map f l
+    |> List.filter (fun x -> x <> None)
+    |> List.map (function Some e -> e | None -> assert false) in
+  { funs = filter_map p ~f:(tdecl (Env.create 13)) }
 
