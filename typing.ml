@@ -66,7 +66,7 @@ module Env =
     type t = {
       struct_env: (Ttree.ident, Ttree.structure) Hashtbl.t;
       var_env   : (Ttree.ident, Ttree.typ) Hashtbl.t;
-      fun_env   : (Ttree.ident, (Ttree.typ * Ttree.decl_var list)) Hashtbl.t;
+      fun_env   : (Ttree.ident, Ttree.typ * Ttree.decl_var list) Hashtbl.t;
     }
            
     let create n =
@@ -131,14 +131,22 @@ module Env =
       let var_env = check_vars env decl_list in      
       Hashtbl.iter (fun key _ -> Hashtbl.remove env.var_env key) var_env
 
-    let find env id = Hashtbl.find_opt env id
+    let find_opt env id = Hashtbl.find_opt env id
+
+    let find_opt_struct { struct_env; _ } id = find_opt struct_env id
+
+    let find_opt_var { var_env; _ } id = find_opt var_env id
+
+    let find_opt_fun { fun_env; _ } id = find_opt fun_env id
+
+    let find env id = Hashtbl.find env id
 
     let find_struct { struct_env; _ } id = find struct_env id
 
     let find_var { var_env; _ } id = find var_env id
 
     let find_fun { fun_env; _ } id = find fun_env id
-
+    
   end
 
       
@@ -160,7 +168,7 @@ let rec texpr env e =
      begin match lval with
      | Ptree.Lident { id; id_loc } ->
         let expr_typ =
-          match (Env.find_var env id) with
+          match (Env.find_opt_var env id) with
           | Some t -> t
           | None -> error_msg (Undefinition ("variable", id)) id_loc in
         let expr_node = Ttree.Eaccess_local id in
@@ -208,7 +216,7 @@ let rec texpr env e =
        
   | Ptree.Ecall ({ id; id_loc }, expr_list) ->
      let expr_list' = List.map (texpr env) expr_list in
-     begin match Env.find_fun env id with
+     begin match Env.find_opt_fun env id with
      | Some (fun_typ, fun_formals) ->
         let aux ((continue, _) as acc) (e, (f_typ, _)) =
           if not continue then acc
@@ -221,7 +229,7 @@ let rec texpr env e =
      | None -> error_msg (Undefinition ("function", id)) id_loc end
        
   | Ptree.Esizeof { id; id_loc } ->
-     match Env.find_struct env id with
+     match Env.find_opt_struct env id with
      | Some s -> (build_expr (Ttree.Esizeof s) Ttree.Tint)
      | None -> error_msg (Undefinition ("struct", id)) id_loc
 
@@ -257,12 +265,12 @@ let tbody env fun_typ =
 (* Typing function and structure declarations                                           *)
 (* ------------------------------------------------------------------------------------ *)
 
+
 let tdecl env = function
   | Ptree.Dfun { fun_typ; fun_name; fun_formals = decl_list; fun_body } ->
-     let open Env in
      Env.add_fun env fun_typ fun_name decl_list;
      Env.add_vars env decl_list;
-     let fun_typ, fun_formals = Hashtbl.find env.fun_env fun_name.id in
+     let fun_typ, fun_formals = Env.find_fun env fun_name.id in
      let fun_name = fun_name.id in
      let fun_body =  (* We consider the body of a function as a block statement *)
        let fun_block = Ptree.Sblock (fun_body) in

@@ -12,9 +12,6 @@
 open Ops
 open Rtltree
 
-open Label
-open Register
-
 
 (* ------------------------------------------------------------------------------------ *)
 (* Global variables                                                                     *)
@@ -162,5 +159,5 @@ let deffun ({ fun_name; fun_formals; fun_locals; fun_body } : Ops.decl_fun) =
 (* Translation of a program                                                             *)
 (* ------------------------------------------------------------------------------------ *)
 
-let program ({ funs } : Ops.file) = { funs = List.map deffun funs }
+let program { Ops.funs } = { funs = List.map deffun funs }
                                       
