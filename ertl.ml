@@ -9,16 +9,13 @@
 (* Transfer Langage).                                                                   *)
 (* ------------------------------------------------------------------------------------ *)
 
-open Rtltree
-open Ertltree
-
 
 (* ------------------------------------------------------------------------------------ *)
 (* Global variables                                                                     *)
 (* ------------------------------------------------------------------------------------ *)
 
 (* Control flow graph *)
-let graph = ref Label.M.empty
+let (graph : Ertltree.cfg ref) = ref Label.M.empty
 
 let generate i =
   let l = Label.fresh () in
@@ -69,27 +66,25 @@ let instr = function
          else r_list, (split n p_list) in
        let aux r' p' l' = generate (Ertltree.Embinop (Ops.Mmov, r', p', l')) in
        List.fold_right2 aux r_list' p_list' argpush_l in
-     let inst = Label.M.find argpass_l !graph in
-     graph := Label.M.remove argpass_l !graph;
-     inst
+     Label.M.find argpass_l !graph  (* argpass_l becomes unreachable: no precedent instruction *)
 
 
 (* ------------------------------------------------------------------------------------ *)
 (* Memory menagement at the beginning of a function                                     *)
 (* ------------------------------------------------------------------------------------ *)
 
-let fun_beginning (f : Rtltree.deffun) locals =
-  let n = List.length f.fun_formals in
+let fun_beginning { Rtltree.fun_formals; fun_entry; _ } locals =
+  let n = List.length fun_formals in
   let argpop_l =
     if n > 6 then
-      let r_list' = split (n - 6) (List.rev f.fun_formals) in
+      let r_list' = split (n - 6) (List.rev fun_formals) in
       let aux (l', ofs) r = (generate (Ertltree.Eget_param (ofs, r, l')), ofs + 8) in
-      let l, _ = List.fold_left aux (f.fun_entry, 16) r_list' in l
-    else f.fun_entry in
+      let l, _ = List.fold_left aux (fun_entry, 16) r_list' in l
+    else fun_entry in
   let argrec_l =
     let r_list', p_list' =
-      if n > 6 then split 6 f.fun_formals, Register.parameters
-      else f.fun_formals, split n Register.parameters in
+      if n > 6 then split 6 fun_formals, Register.parameters
+      else fun_formals, split n Register.parameters in
     let aux r p l' = generate (Ertltree.Embinop (Ops.Mmov, p, r, l')) in
     List.fold_right2 aux r_list' p_list' argpop_l in
   let callee_rgts, calleesav_l =
@@ -105,13 +100,13 @@ let fun_beginning (f : Rtltree.deffun) locals =
 (* Memory menagement at the end of a function                                           *)
 (* ------------------------------------------------------------------------------------ *)
 
-let fun_ending (f : Rtltree.deffun) r_list =
+let fun_ending f r_list =
   let ret_l = generate (Ertltree.Ereturn) in
   let del_l = generate (Ertltree.Edelete_frame ret_l) in
   let aux l r c =
     generate (Ertltree.Embinop (Ops.Mmov, r, c, l)) in
   let call_l = List.fold_left2 aux del_l r_list Register.callee_saved in
-  Ertltree.Embinop (Ops.Mmov, f.fun_result, Register.rax, call_l)
+  Ertltree.Embinop (Ops.Mmov, f.Rtltree.fun_result, Register.rax, call_l)
 
 
 (* ------------------------------------------------------------------------------------ *)
@@ -119,25 +114,26 @@ let fun_ending (f : Rtltree.deffun) r_list =
 (* ------------------------------------------------------------------------------------ *)
 
 (* Fill the graph with the translaton of each instruction *)
-let fill_graph (f : Rtltree.deffun) =
+let fill_graph f =
   let aux l i =
     let i' = instr i in
     graph := Label.M.add l i' !graph; in
-  begin Label.M.iter aux f.fun_body end
+  begin Label.M.iter aux f.Rtltree.fun_body end
 
 
-let deffun (f : Rtltree.deffun) =
+let deffun f =
   fill_graph f;
-  let fun_name = f.fun_name in
-  let fun_formals = List.length f.fun_formals in
-  let locals = ref f.fun_locals in
+  let fun_name = f.Rtltree.fun_name in
+  let fun_formals = List.length f.Rtltree.fun_formals in
+  let locals = ref f.Rtltree.fun_locals in
   let fun_entry, callee_rgts = fun_beginning f locals in
   let fun_exit = fun_ending f callee_rgts in
-  graph := Label.M.add f.fun_exit fun_exit !graph;
+  graph := Label.M.add f.Rtltree.fun_exit fun_exit !graph;
   let fun_locals = !locals in
   let fun_body = !graph in
   graph := Label.M.empty;
   {
+    Ertltree.
     fun_name;
     fun_formals;
     fun_locals;
@@ -150,5 +146,5 @@ let deffun (f : Rtltree.deffun) =
 (* Translation of a program                                                             *)
 (* ------------------------------------------------------------------------------------ *)
 
-let program ({ funs } : Rtltree.file) = { funs = List.map deffun funs }
+let program { Rtltree.funs } = { Ertltree.funs = List.map deffun funs }
 
