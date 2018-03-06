@@ -13,8 +13,6 @@
 (*                                                                                      *)
 (* ------------------------------------------------------------------------------------ *)
 
-open Ertltree
-
 
 (* ------------------------------------------------------------------------------------ *)
 (* Usefull information for each instruction                                             *)
@@ -69,7 +67,7 @@ let liveness (cfg : Ertltree.cfg) =
   let update_pred l li =
     let aux l_succ =
       let next_li = Hashtbl.find table l_succ in
-      next_li.pred <- Label.S.add l next_li.pred; in
+      next_li.pred <- Label.S.add l next_li.pred in
     List.iter aux li.succ in
   Hashtbl.iter update_pred table;
   kildall table;
@@ -94,12 +92,12 @@ type file = {
   }
 
           
-let deffun ({ fun_name; fun_formals; fun_locals; fun_entry; fun_body } : Ertltree.deffun ) =
+let deffun { Ertltree.fun_name; fun_formals; fun_locals; fun_entry; fun_body } =
   let fun_body = liveness fun_body in
   { fun_name; fun_formals; fun_locals; fun_entry; fun_body }
 
   
-let program ({ funs } : Ertltree.file) = { funs = List.map deffun funs }
+let program p = { funs = List.map deffun p.Ertltree.funs }
 
 
 (* ------------------------------------------------------------------------------------ *)
@@ -111,8 +109,10 @@ open Pp
 
 let print_set = Register.print_set
 
+              
 let print_live_info fmt li =
-  fprintf fmt "in = {%a}; out = {%a}" print_set li.ins print_set li.outs
+  fprintf fmt "defs = {%a} in = {%a}; out = {%a}"
+    print_set li.defs print_set li.ins print_set li.outs
 
 
 let visit f g entry =
@@ -131,8 +131,10 @@ let visit f g entry =
   in
   visit entry
 
+  
 let print_graph fmt =
   visit (fun l i -> fprintf fmt "%a: %a@\n" Label.print l print_live_info i)
+
 
 let print_deffun fmt f =
   fprintf fmt "%s(%d)@\n" f.fun_name f.fun_formals;
@@ -141,6 +143,7 @@ let print_deffun fmt f =
   fprintf fmt "locals: @[%a@]@\n" Register.print_set f.fun_locals;
   print_graph fmt f.fun_body f.fun_entry;
   fprintf fmt "@]@."
+
 
 let print_file fmt p =
   fprintf fmt "=== Live Info ============================================@\n";
