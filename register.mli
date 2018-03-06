@@ -44,7 +44,10 @@ val caller_saved: t list
 val callee_saved: t list
 
 val allocatable : set
-  (** ensemble des registres participant à l'allocation de registres *)
+(** ensemble des registres participant à l'allocation de registres *)
+
+val k : int
+(** le nombre de resgistres participant à l'allocation de registres *)
 
 val tmp1: t
 val tmp2: t

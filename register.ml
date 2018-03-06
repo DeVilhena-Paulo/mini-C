@@ -41,6 +41,8 @@ let callee_saved =
 
 let allocatable = set_of_list (caller_saved @ callee_saved)
 
+let k = S.cardinal allocatable
+
 let rsp =
   "%rsp"
 
