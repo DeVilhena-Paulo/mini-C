@@ -6,26 +6,29 @@ open Lexing
 
 let () = Printexc.record_backtrace true
 
-let parse_only = ref false
-let type_only = ref false
-let interp_rtl = ref false
+let parse_only  = ref false
+let type_only   = ref false
+let interp_rtl  = ref false
 let interp_ertl = ref false
-let debug = ref false
+let interp_ltl  = ref false
+let debug       = ref false
 
 let ifile = ref ""
 
 let set_file f s = f := s
 
 let options =
-  ["--parse-only", Arg.Set parse_only,
+  ["--parse-only",  Arg.Set parse_only,
      "  stops after parsing";
-   "--type-only", Arg.Set type_only,
+   "--type-only",   Arg.Set type_only,
      "  stops after typing";
-   "--interp-rtl", Arg.Set interp_rtl,
+   "--interp-rtl",  Arg.Set interp_rtl,
      "  interprets RTL (and does not compile)";
    "--interp-ertl", Arg.Set interp_ertl,
      "  interprets ERTL (and does not compile)";
-   "--debug", Arg.Set debug,
+   "--interp-ltl",  Arg.Set interp_ltl,
+     "  interprets ERTL (and does not compile)";
+   "--debug",       Arg.Set debug,
      "  debug mode";
    ]
 
@@ -51,18 +54,36 @@ let () =
     let p = Parser.file Lexer.token buf in
     close_in f;
     if !parse_only then exit 0;
+    
     let p = Typing.program p in
     if !type_only then exit 0;
+    
     let p = Ops.program p in
+    
     let p = Rtl.program p in
     if debug then Rtltree.print_file std_formatter p;
     if !interp_rtl then begin ignore (Rtlinterp.program p); exit 0 end;
+    
     let p = Ertl.program p in
     if debug then Ertltree.print_file std_formatter p;
     if !interp_ertl then begin ignore (Ertlinterp.program p); exit 0 end;
-    let p = Kildall.program p in
-    if debug then Kildall.print_file std_formatter p;
-    (* ... *)
+
+    let p = Ltl.program p in
+    if debug then Ltltree.print_file std_formatter p;
+    if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
+
+    let p = Assembly.program p in
+    if debug
+    then X86_64.print_program std_formatter p;
+
+    Bytes.set !ifile ((String.length !ifile) - 1) 's';
+    X86_64.print_in_file ~file:!ifile p;
+    (* let p = Kildall.program p in
+    if debug then begin
+      Kildall.print_file std_formatter p;
+      Interference.print_file std_formatter p;
+      Coloring.print_file std_formatter p end;
+     ... *)
   with
     | Lexer.Lexical_error c ->
 	localisation (Lexing.lexeme_start_p buf);
