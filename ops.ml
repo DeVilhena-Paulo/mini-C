@@ -46,8 +46,6 @@ and mbinop =
   | Msetne
   | Msetl
   | Msetle
-  
-  (* Unused constructors *)
   | Msetg
   | Msetge
 
@@ -177,10 +175,8 @@ let rec mkMul e1 e2 =
           
 let mkDiv e1 e2 =
   match e1, e2 with
-  | Mconst i1, Mconst i2 -> Mconst (Int32.div i1 i2)
-  | _, Mconst i ->
-     if i = zero then assert false else
-       if i = one && pure e1 then e1 else Mbinop (Mdiv, e1, e2)
+  | Mconst i1, Mconst i2 when i2 <> zero -> Mconst (Int32.div i1 i2)
+  | _, Mconst i when i = one -> e1
   | _ -> Mbinop (Mdiv, e1, e2)
 
 
@@ -190,7 +186,7 @@ let mkAnd e1 e2 =
      let value = if i1 <> zero && i2 <> zero then one else zero in
      Mconst value
   | Mconst i, (_ as e) | (_ as e), Mconst i ->
-     if i = zero then Mconst zero else e
+     if i = zero then Mconst zero else Munop (Msetnei zero, e)
   | _ -> Munop (Msetnei zero, mkMul e1 e2)  (* Msetnei implies value between 0 and 1 *)
 
 
@@ -200,7 +196,7 @@ let mkOr e1 e2 =
      let value = if i1 <> zero || i2 <> zero then one else zero in
      Mconst value
   | Mconst i, (_ as e) | (_ as e), Mconst i ->
-     if i <> zero then Mconst one else e
+     if i <> zero then Mconst one else Munop (Msetnei zero, e)
   | _ -> mkNot (mkMul (mkNot e1) (mkNot e2))
 
 
