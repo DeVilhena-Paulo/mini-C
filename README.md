@@ -21,11 +21,11 @@ $ cd tests
 ```
 Then compile one of its mini-C source files to x86-64 assembly with your brand new mini-C compiler. For example:
 ```sh
-.././mini-c mandelbrot.c
+$ .././mini-c mandelbrot.c
 ```
 Finally, you can use the assembler (as) to create the object file and the linker (ld) to build the executable. Or, more simply, just use gcc:
 ```sh
-gcc mandelbrot.s -o mandelbrot && ./mandelbrot
+$ gcc mandelbrot.s -o mandelbrot && ./mandelbrot
 ```
 
 ## Understanding the Project
@@ -66,7 +66,7 @@ With the output from the Interference module, we are finally able to replace our
 
 ### Ltl Module
 
-The main work of register allocation having already been implemented in the three past modules, Here we only make sure to respect some restrictions from the assembly x86_64 set of instructions such as a maximum of one memory access per operation.
+The main work of register allocation having already been implemented in the three past modules. Here we only make sure to respect some restrictions from the assembly x86_64 set of instructions such as a maximum of one memory access per operation.
 
 ### Assembly Module
 
