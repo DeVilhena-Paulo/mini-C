@@ -146,6 +146,8 @@ let rec exec st gr l =
   | Ecall (x, l) ->
     call st x;
     exec st gr l
+  | Etail_call x ->
+     call st x
   | Egoto l ->
     exec st gr l
   | Epush (r, l) ->

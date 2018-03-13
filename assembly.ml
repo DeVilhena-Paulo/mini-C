@@ -1,8 +1,16 @@
 
+(* ------------------------------------------------------------------------------------ *)
+(* Translation: LTL -> Assembly                                                         *)
+(* ------------------------------------------------------------------------------------ *)
+
 open X86_64
 
 type instr = Code of text | Label of Label.t
 
+
+(* ------------------------------------------------------------------------------------ *)
+(* Global variables                                                                     *)
+(* ------------------------------------------------------------------------------------ *)
 
 let code = ref []
 
@@ -10,6 +18,10 @@ let visited = Hashtbl.create 17
          
 let labels = Hashtbl.create 17
 
+
+(* ------------------------------------------------------------------------------------ *)
+(* Auxiliary functions                                                                  *)
+(* ------------------------------------------------------------------------------------ *)
 
 let emit l i = code := Code i :: Label l :: !code
 
@@ -24,12 +36,19 @@ let operand = function
   | Ltltree.Spilled n -> ind ~ofs:n rbp
 
 
+(* ------------------------------------------------------------------------------------ *)
+(* Translation of a function                                                            *)
+(* ------------------------------------------------------------------------------------ *)
+
 let linearize_function g fun_entry =
   let rec lin l =
     if not (Hashtbl.mem visited l)
     then begin Hashtbl.add visited l (); instr l (Label.M.find l g) end
     else begin need_label l; emit_wl (jmp (l :> string)) end
 
+  (* ---------------------------------------------------------------------------------- *)
+  (* Translation of an instruction                                                      *)
+  (* ---------------------------------------------------------------------------------- *)
   and instr l i =
     let module Lt = Ltltree in
     
@@ -53,6 +72,7 @@ let linearize_function g fun_entry =
     and instr' = function
       | Lt.Econst (n, op, l1) -> emit l (movq (imm32 n) (operand op)); lin l1
       | Lt.Ereturn -> emit l ret
+      | Lt.Etail_call id  -> emit l (jmp id)
       | Lt.Epush (op, l1) -> emit l (pushq (operand op)); lin l1
       | Lt.Epop (r, l1)   -> emit l (popq (inject r)); lin l1
       | Lt.Egoto l1 -> begin if not (Hashtbl.mem visited l1) then emit l nop end; lin l1
@@ -128,8 +148,11 @@ let deffun { Ltltree.fun_name; fun_entry; fun_body } =
   |> List.map (function Label l -> label (l :> string) | Code i -> i)
   |> concat
   |> (fun c -> (inline ((fun_name :> string) ^ ":\n")) ++ c)
-  
+
+
+(* ------------------------------------------------------------------------------------ *)
+(* Translation of a program                                                             *)
+(* ------------------------------------------------------------------------------------ *)
                      
 let program { Ltltree.funs } =
-  { text = (globl "main") ++ (concat (List.map deffun funs)); data = nop }
-
+  { text = List.fold_right ( ++ ) ((globl "main") :: (List.map deffun funs)) nop; data = nop }

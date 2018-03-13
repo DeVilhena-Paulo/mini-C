@@ -1,12 +1,25 @@
 
+(* --------------------------------------------------------------------------------------- *)
+(* Graph-Coloring Register Allocation                                                      *)
+(*                                                                                         *) 
+(* With the output from the Interference module, we are finally able to replace our pseudo *)
+(* registers by one of the allocatable registers of the machine or by a location on the    *)
+(* stack. The approach implemented here is known as George and Appel iterated register     *)
+(* coalescing algorithm.                                                                   *)
+(* --------------------------------------------------------------------------------------- *)
+
 type color = Ltltree.operand
 
            
 type coloring = color Register.map
 
+  
+(* --------------------------------------------------------------------------------------- *)
+(* Auxiliary functions                                                                     *)
+(* --------------------------------------------------------------------------------------- *)
 
 let degree g v =
-  let { Interference.prefs; intfs } = Interference.find_arcs v g in
+  let { Interference.prefs; intfs } = Register.M.find v g in
   (Register.S.cardinal prefs) + (Register.S.cardinal intfs)
 
 
@@ -29,7 +42,7 @@ let george_criteria k g v1 v2 =
   else verify (fun w -> Register.is_hw w  || degree g w >= k)
 
   
-let find_pref_arc k g =
+let find_pref_arc k g =  (* Find a preference arc on g satisfying the George criteria *)
   let aux v1 { Interference.prefs; _ } = function
     | Some _ as arc -> arc
     | None ->
@@ -39,7 +52,7 @@ let find_pref_arc k g =
   Register.M.fold aux g None
 
   
-let remove v neighbors g =
+let remove v neighbors g =  (* Remove v from the `adjacency list' of its neighbors *)
   let elim { Interference.prefs; intfs } =
     let prefs = Register.S.remove v prefs in
     let intfs = Register.S.remove v intfs in
@@ -52,7 +65,7 @@ let erase v g =
   remove v neighbors g |> Register.M.remove v
 
   
-let erase_prefs v g =
+let erase_prefs v g =  (* Reomve preference arcs from v *)
   let { Interference.intfs; prefs } = Register.M.find v g in
   remove v prefs g |> Register.M.add v { Interference.intfs; prefs = Register.S.empty }
 
@@ -85,7 +98,11 @@ let color_to_string = function
   | Ltltree.Spilled n -> "Spilled " ^ (string_of_int n)
                
   
-let iter_reg_coalescing n k igraph =
+(* --------------------------------------------------------------------------------------- *)
+(* The George-Appel algorithm                                                              *)
+(* --------------------------------------------------------------------------------------- *)
+
+let iter_reg_coalescing ~n_spilled:n ~n_allocatable:k igraph =
   
   let rec simplify g =
     let g' =
@@ -121,36 +138,9 @@ let iter_reg_coalescing n k igraph =
     else Register.M.add v (Ltltree.Reg (Register.S.choose regs)) c in
 
   simplify igraph
-
-
-let check c igraph =
-  let aux v { Interference.intfs; _ } =
-    let v_color = Register.M.find v c in
-    let aux' w =
-      let w_color = Register.M.find w c in
-      if v_color = w_color
-      then Format.printf "%s and %s have the same color\n" (v :> string) (w :> string); in
-    Register.S.iter aux' intfs; in
-  begin Register.M.iter aux igraph end
       
 
 let color igraph =
   let n = ref 0 in
-  let c = (iter_reg_coalescing n (Register.k) igraph) in
-  begin check c igraph; (c, !n) end
-
-
-let print_color fmt = function
-  | Ltltree.Reg hr    -> Format.fprintf fmt "%a" Register.print hr
-  | Ltltree.Spilled n -> Format.fprintf fmt "stack %d" n
-
-
-let print (cm, _) =
-  Register.M.iter
-    (fun r cr -> Format.printf "%a -> %a@\n" Register.print r print_color cr) cm
-
-
-let print_file fmt p =
-  Format.fprintf fmt "=== Register Allocation ==================================@\n";
-  List.iter (fun f -> print (color (Interference.make f.Kildall.fun_body))) p.Kildall.funs;
-  print_newline ()
+  let c = iter_reg_coalescing ~n_spilled:n ~n_allocatable:Register.k igraph in
+  (c, !n)

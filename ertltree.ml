@@ -21,6 +21,7 @@ type instr =
   | Emubranch of mubranch * register * label * label
   | Embbranch of mbbranch * register * register * label * label
   | Egoto of label
+  | Etail_call of ident * int * label
   | Ecall of ident * int * label
       (** l'entier est le nombre de paramètres passés dans des registres *)
   | Ealloc_frame of label
@@ -75,12 +76,15 @@ let def_use = function
   | Estore (r1, r2, _, _)
   | Embbranch (_, r1, r2, _, _) ->
      [], [r1; r2]
+
   | Ecall (_, n, _) ->
      Register.caller_saved, prefix n Register.parameters
   | Egoto _
   | Ealloc_frame _
   | Edelete_frame _ ->
      [], []
+  | Etail_call (_, n, _) ->
+     Register.caller_saved, (prefix n Register.parameters) @ Register.callee_saved
   | Ereturn ->
      [], Register.rax :: Register.callee_saved
 
@@ -115,7 +119,9 @@ let print_instr fmt = function
 	print_mbbranch op Register.print r1 Register.print r2
         Label.print l1 Label.print l2
   | Egoto l ->
-      fprintf fmt "goto %a" Label.print l
+     fprintf fmt "goto %a" Label.print l
+  | Etail_call (x, n, l) ->
+     fprintf fmt "terminal_call %s(%d) --> %a" x n Label.print l
   | Ecall (x, n, l) ->
       fprintf fmt "call %s(%d)  --> %a" x n Label.print l
   | Ealloc_frame l ->
@@ -144,7 +150,8 @@ let succ = function
       [l]
   | Emubranch (_, _, l1, l2)
   | Embbranch (_, _, _, l1, l2) ->
-      [l1; l2]
+     [l1; l2]
+  | Etail_call (_, _, _)
   | Ereturn ->
       []
 

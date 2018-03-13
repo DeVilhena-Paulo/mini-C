@@ -31,6 +31,7 @@ type instr =
   | Embinop of mbinop * operand * operand * label
   | Epush of operand * label
   (** légèrement modifiée *)
+  | Etail_call of ident
   | Ecall of ident * label
   (** nouveau *)
   | Epop of register * label
@@ -91,6 +92,8 @@ let print_instr fmt = function
       fprintf fmt "goto %a" Label.print l
   | Ecall (x, l) ->
       fprintf fmt "call %s  --> %a" x Label.print l
+  | Etail_call x ->
+      fprintf fmt "terminal call %s" x
   | Ereturn ->
       fprintf fmt "return"
 
@@ -107,7 +110,8 @@ let succ = function
       [l]
   | Emubranch (_,_,l1,l2)
   | Embbranch (_,_,_,l1,l2) ->
-      [l1; l2]
+     [l1; l2]
+  | Etail_call _
   | Ereturn ->
       []
 

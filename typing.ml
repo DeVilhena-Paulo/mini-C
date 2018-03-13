@@ -1,6 +1,12 @@
 
 (* ------------------------------------------------------------------------------------ *)
-(* The Typing System                                                                    *)
+(* The Type System                                                                      *)
+(*                                                                                      *)
+(* Once the parsing is complete, we need to verify the soundness of the program, that   *)
+(* is, if the the program is well typed. To do so, we exploit two notions: rules and    *)
+(* environment. Rules are formal definitions of what needs to be satisfied in order to  *)
+(* check the validity of the next target. Environment is a set of variables, functions  *)
+(* and structures already typed, which can be useful in a future type check             *)
 (* ------------------------------------------------------------------------------------ *)
 
 open Ttree
@@ -187,10 +193,10 @@ let rec texpr env e =
      let e2' = texpr env e in
      let expr_node, expr_typ =
        match texpr env { expr_node = (Ptree.Eright lval); expr_loc = e.expr_loc } with
-       | { expr_node = Ttree.Eaccess_local id; expr_typ = t } ->
-          Ttree.Eassign_local (id, e2'), t
-       | { expr_node = Ttree.Eaccess_field (e1', f); expr_typ = t } ->
-          Ttree.Eassign_field (e1', f, e2'), t
+       | { expr_node = Ttree.Eaccess_local id; expr_typ; } ->
+          Ttree.Eassign_local (id, e2'), expr_typ
+       | { expr_node = Ttree.Eaccess_field (e1', f); expr_typ; } ->
+          Ttree.Eassign_field (e1', f, e2'), expr_typ
        | _ -> assert false (* unreachable *) in
      if related (e2'.expr_typ, expr_typ) then (build_expr expr_node expr_typ)
      else error_msg (Incompatible (expr_typ, e2'.expr_typ)) e.expr_loc

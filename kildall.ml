@@ -13,7 +13,6 @@
 (*                                                                                      *)
 (* ------------------------------------------------------------------------------------ *)
 
-
 (* ------------------------------------------------------------------------------------ *)
 (* Usefull information for each instruction                                             *)
 (* ------------------------------------------------------------------------------------ *)
@@ -28,13 +27,21 @@ type live_info = {
     mutable outs: Register.set;    (* living vatiables in output *)
   }
 
+(* For each processed function, we store the output of Kildall's algorithm for a        *)
+(* particular instruction: alloc_frame. By doing so, we allow tail calls to that        *)
+(* function.                                                                            *)
+let (functions : (Label.t, Register.set * Register.set) Hashtbl.t) = Hashtbl.create 13
+
 
 let build_info instr =
   let succ = Ertltree.succ instr in
   let pred = Label.S.empty in
   let def_list, use_list = Ertltree.def_use instr in
   let defs, uses = Register.set_of_list def_list, Register.set_of_list use_list in
-  let ins, outs = Register.S.empty, Register.S.empty in
+  let ins, outs =
+    match instr with
+    (* | Ertltree.Etail_call (_, _, l) -> Hashtbl.find functions l *)
+    | _ -> Register.S.empty, Register.S.empty in
   { instr; succ; pred; defs; uses; ins; outs }
 
 
@@ -63,88 +70,17 @@ let kildall table =
 
 let liveness (cfg : Ertltree.cfg) =
   let table = Hashtbl.create 13 in
-  Label.M.iter (fun l i -> Hashtbl.add table l (build_info i)) cfg;
+  Label.M.iter (fun l i -> Hashtbl.add table l (build_info i)) cfg;  (* Initialization *)
   let update_pred l li =
     let aux l_succ =
       let next_li = Hashtbl.find table l_succ in
       next_li.pred <- Label.S.add l next_li.pred in
     List.iter aux li.succ in
-  Hashtbl.iter update_pred table;
+  Hashtbl.iter update_pred table;  (* Compute precedent instructions *)
   kildall table;
+  Hashtbl.iter (fun l i ->
+      match i.instr with
+      | Ertltree.Ealloc_frame _ -> Hashtbl.add functions l (i.ins, i.ins)
+      | _ -> ()) table;  (* Update `functions` for future tail cails *)
   Hashtbl.fold (fun l li set -> Label.M.add l li set) table (Label.M.empty)
 
-
-(* ------------------------------------------------------------------------------------ *)
-(* Translation: Ertltree -> Kildall                                                     *)
-(* ------------------------------------------------------------------------------------ *)
-         
-type deffun = {
-    fun_name : Ertltree.ident;
-    fun_formals : int;
-    fun_locals : Register.set;
-    fun_entry : Ertltree.label;
-    fun_body : live_info Label.map;
-  }
-
-            
-type file = {
-    funs : deffun list;
-  }
-
-          
-let deffun { Ertltree.fun_name; fun_formals; fun_locals; fun_entry; fun_body } =
-  let fun_body = liveness fun_body in
-  { fun_name; fun_formals; fun_locals; fun_entry; fun_body }
-
-  
-let program p = { funs = List.map deffun p.Ertltree.funs }
-
-
-(* ------------------------------------------------------------------------------------ *)
-(* Print functions                                                                      *)
-(* ------------------------------------------------------------------------------------ *)
-
-open Format
-open Pp
-
-let print_set = Register.print_set
-
-              
-let print_live_info fmt li =
-  fprintf fmt "defs = {%a} in = {%a}; out = {%a}"
-    print_set li.defs print_set li.ins print_set li.outs
-
-
-let visit f g entry =
-  let visited = Hashtbl.create 97 in
-  let rec visit l =
-    if not (Hashtbl.mem visited l) then
-      begin
-        Hashtbl.add visited l ();
-        try
-          let i = Label.M.find l g in
-          f l i;
-          List.iter visit (i.succ)
-        with Not_found ->
-          failwith ("Label " ^ (l :> string) ^ " not found")
-      end
-  in
-  visit entry
-
-  
-let print_graph fmt =
-  visit (fun l i -> fprintf fmt "%a: %a@\n" Label.print l print_live_info i)
-
-
-let print_deffun fmt f =
-  fprintf fmt "%s(%d)@\n" f.fun_name f.fun_formals;
-  fprintf fmt "  @[";
-  fprintf fmt "entry : %a@\n" Label.print f.fun_entry;
-  fprintf fmt "locals: @[%a@]@\n" Register.print_set f.fun_locals;
-  print_graph fmt f.fun_body f.fun_entry;
-  fprintf fmt "@]@."
-
-
-let print_file fmt p =
-  fprintf fmt "=== Live Info ============================================@\n";
-  List.iter (print_deffun fmt) p.funs

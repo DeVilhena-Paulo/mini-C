@@ -116,6 +116,8 @@ let rec exec st gr l =
   | Ecall (x, _, l) ->
     call st x;
     exec st gr l
+  | Etail_call (x, _, _) ->
+     call st x
   | Egoto l ->
     exec st gr l
   | Ealloc_frame l ->

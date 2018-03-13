@@ -1,4 +1,13 @@
 
+(* --------------------------------------------------------------------------------------- *)
+(* Interference Graph                                                                      *)
+(*                                                                                         *) 
+(* The purpose of this step is to build a graph for each function of our program where the *)
+(* vertices are registers (pseudo or not) and the arcs are of two kinds: interference,     *)
+(* expressing that the two ending vertices can't be allocated in the same real register,   *)
+(* and preference, expresssing that it would be prefereable to allocate the two ending     *)
+(* vertices in the same real register, but not required.                                   *)
+(* --------------------------------------------------------------------------------------- *)
 
 type arc =
   | Pref of Register.t * Register.t
@@ -14,33 +23,26 @@ type arcs = {
 type igraph = arcs Register.map
 
 
-let build_arcs () =
-  { prefs = Register.S.empty; intfs = Register.S.empty }
+let build_arcs () = { prefs = Register.S.empty; intfs = Register.S.empty }
 
   
-let find_arcs v g =
-  if Register.M.mem v g then Register.M.find v g else build_arcs ()
-
-    
-let update_intfs v w { prefs; intfs } =
+let update_intfs g v w =
+  let { prefs; intfs } = if Register.M.mem v g then Register.M.find v g else build_arcs () in
   let prefs = Register.S.remove w prefs in
   let intfs = Register.S.add    w intfs in
   { prefs; intfs }
 
 
-let update_prefs v w v_arcs =
-  if Register.S.mem w v_arcs.intfs then v_arcs
-  else { v_arcs with prefs = Register.S.add w v_arcs.prefs; }
-
-
-let update g = function
-  | Pref (v, w) -> Register.M.add v (update_prefs v w (find_arcs v g)) g
-  | Intf (v, w) -> Register.M.add v (update_intfs v w (find_arcs v g)) g
+let update_prefs g v w =
+  let { prefs; intfs } as v_arcs =
+    if Register.M.mem v g then Register.M.find v g else build_arcs () in
+  if Register.S.mem w intfs then v_arcs else { intfs; prefs = Register.S.add w prefs; }
 
 
 let add arc g =
-  let invert = function Pref (v, w) -> Pref (w, v) | Intf (v, w) -> Intf (w, v) in
-  update (update g arc) (invert arc)
+  match arc with
+  | Pref (v, w) -> Register.M.add v (update_prefs g v w) g |> Register.M.add w (update_prefs g w v)
+  | Intf (v, w) -> Register.M.add v (update_intfs g v w) g |> Register.M.add w (update_intfs g w v)
 
 
 let add_intfs defs outs g =
@@ -59,15 +61,3 @@ let increment g { Kildall.instr; defs; outs; _ } =
 
 let make li_map =
   Label.M.fold (fun _ li g -> increment g li) li_map Register.M.empty
-
-
-let print ig =
-  Register.M.iter (fun r arcs ->
-    Format.printf "%4s: prefs=@[%a@] intfs=@[%a@]@." (r :> string)
-      Register.print_set arcs.prefs Register.print_set arcs.intfs) ig
-
-
-let print_file fmt p =
-  Format.fprintf fmt "=== Interference Graph ===================================@\n";
-  List.iter (fun f -> print (make f.Kildall.fun_body)) p.Kildall.funs;
-  print_newline ()

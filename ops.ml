@@ -4,9 +4,9 @@
 (*                                                                                      *)
 (* In this step of the compilation process, we define how each expression will be       *)
 (* computed by the compiler. While, we still preserve the abstract syntax structure and *)
-(* we don't indentify the set of instructions from the x86-64 architecture, the result  *)
-(* at the end of this step is much more similar to the way that the compiler computes   *)
-(* each expression individually.                                                        *)
+(* we don't indentify the set of instructions from the x86-64 architecture itself , the *)
+(* result at the end of this step is much more similar to the way that the compiler     *)
+(* computes each expression individually.                                               *)
 (* ------------------------------------------------------------------------------------ *)
 
 open Ttree
