@@ -1,6 +1,6 @@
 # mini-C
 
-This project is part of the course **[INF564 - Compilation](https://www.enseignement.polytechnique.fr/informatique/INF564/)**, taught at École Polytechnique by Jean-Christophe Filliâtre with assistance of Mário Pereira, both to whom I'm very grateful. It consists of implementing a compiler of a small fragment of the C programming language, called mini-C, for learning purposes. The design is a simplification of Xavier Leroy's [CompCert](http://compcert.inria.fr/) (C compiler programmed in Caml and programmed and proved in Coq).
+This project is part of the course [INF564 - Compilation](https://www.enseignement.polytechnique.fr/informatique/INF564/), taught at École Polytechnique by Jean-Christophe Filliâtre with assistance of Mário Pereira, both to whom I'm very grateful. It consists of implementing a compiler of a small fragment of the C programming language, called mini-C, for learning purposes. The design is a simplification of Xavier Leroy's [CompCert](http://compcert.inria.fr/) (C compiler programmed in Caml and programmed and proved in Coq).
 
 ## Usage
 
@@ -55,7 +55,7 @@ Here, we give some final touches to our Rtl instructions before moving to regist
 
 ### Kildall Module
 
-This module is the beginning of our register allocation journey. In order to implement our pseudo registers as real registers of the machine, we need first to find out for how long and at each instructions the value at a given pseudo register is needed. That’s the purpose of this module, which implement Kildall’s algorithm to find the subset of pseudo-registers that **could** be needed by each instruction.
+This module is the beginning of our register allocation journey. In order to implement our pseudo registers as real registers of the machine, we need first to find out for how long and at each instructions the value at a given pseudo register is needed. That’s the purpose of this module, which implement Kildall’s algorithm to find the subset of pseudo-registers that _could_ be needed by each instruction.
 
 ### Interference Module
 
@@ -79,9 +79,9 @@ In addition to what have been requested, I made some other improvements just for
 
 ### Tail Call Optimization
 
-Tail calls are noticed and optimized at the translation from RTL to ERTL. The price for this optimization is to solve the problem of replacing the caller’s frame with the frame of the function being called. The way it works on the project is as follows. First we compute the gap between actual and next frames in number of bytes (the number of parameters located on the stack for each function is what determines it), let’s call it __gap__. Then we save the values stored at __0(%rbp)__ and __8(%rbp)__ (previous __%rbp__ and return address) on temporary pseudo-registers. Finally, together with possible function parameters exceeding the 6 available real registers we can start the process of replacing frames by moving __0(%rbp)__ to __gap(%rbp)__, __8(%rbp)__ to __gap+8(%rbp)__, the last function parameter to __gap+16(%rbp)__ and so on.
+Tail calls are noticed and optimized at the translation from RTL to ERTL. The price for this optimization is to solve the problem of replacing the caller’s frame with the frame of the function being called. The way it works on the project is as follows. First we compute the gap between actual and next frames in number of bytes (the number of parameters located on the stack for each function is what determines it), let’s call it _gap_. Then we save the values stored at _0(%rbp)_ and _8(%rbp)_ (previous _%rbp_ and return address) on temporary pseudo-registers. Finally, together with possible function parameters exceeding the 6 available real registers we can start the process of replacing frames by moving _0(%rbp)_ to _gap(%rbp)_, _8(%rbp)_ to _gap+8(%rbp)_, the last function parameter to _gap+16(%rbp)_ and so on.
 
-Other small modifications were necessary, but the only one that needs clarification is how we make the life analysis of functions benefiting from a tail call. It’s not clear what are the pseudo registers being used and defined by a tail call, so a first solution is to save Kildall's output for each instruction alloc_frame and make use of it every time we see a tail call. Another solution is to guess the subset of registers used and defined by a tail call instruction. I’ve noticed that __use__ = __callee_saved__ U __parameter registers__ and __def__ = __caller_saved__ work for every test.
+Other small modifications were necessary, but the only one that needs clarification is how we make the life analysis of functions benefiting from a tail call. It’s not clear what are the pseudo registers being used and defined by a tail call, so a first solution is to save Kildall's output for each instruction alloc_frame and make use of it every time we see a tail call. Another solution is to guess the subset of registers used and defined by a tail call instruction. I’ve noticed that _use_ = _callee_saved_ U _parameter registers_ and _def_ = _caller_saved_ work for every test.
 
 Note: To run the interpreters, you will have to comment the tail call treatment at the Ertl file and recompile the project.
 
