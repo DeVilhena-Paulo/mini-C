@@ -1,6 +1,6 @@
 # mini-C
 
-This project is part of the course **[INF564 - Compilation](https://www.enseignement.polytechnique.fr/informatique/INF564/)**, taught at École Polytechnique by Jean-Christophe Filliâtre with assistance of Mário Pereira, both to whom I'm very grateful. It consists of the implementation a compiler of a small fragment of the C programming language, called mini-C. The purpose of the project is to help us learn the fundamental principles behind compilation to x86-64 and, more specifically, those from Xavier Leroy's CompCert (C compiler programmed in Caml and programmed and proved in Coq).
+This project is part of the course **[INF564 - Compilation](https://www.enseignement.polytechnique.fr/informatique/INF564/)**, taught at École Polytechnique by Jean-Christophe Filliâtre with assistance of Mário Pereira, both to whom I'm very grateful. It consists of implementing a compiler of a small fragment of the C programming language, called mini-C, for learning purposes. The design is a simplification of Xavier Leroy's [CompCert](http://compcert.inria.fr/) (C compiler programmed in Caml and programmed and proved in Coq).
 
 ## Usage
 
@@ -14,7 +14,7 @@ After getting a local copy of the project, you can build it by running the follo
 ```sh
 $ make
 ```
-You will then have the compiler read to run. Let's try it !
+You will then have the compiler ready to run. Let's try it !
 Move to the folder called tests:
 ```sh
 $ cd tests
@@ -25,12 +25,13 @@ $ .././mini-c mandelbrot.c
 ```
 Finally, you can use the assembler (as) to create the object file and the linker (ld) to build the executable. Or, more simply, just use gcc:
 ```sh
-$ gcc mandelbrot.s -o mandelbrot && ./mandelbrot
+$ gcc mandelbrot.s -o mandelbrot
+$ ./mandelbrot
 ```
 
 ## Understanding the Project
 
-The teaching staff (Jean-Christophe Filliâtre and Mário Pereira) programmed a big part of the project, including the parser, interpreters for RTL, ERTL and LTL (extremely helpful for debugging) and the module X86_64, which contains numerous well written tools for producing x86_64 assembly code.
+The teaching staff (Jean-Christophe Filliâtre and Mário Pereira) programmed a big part of the project: parser, interpreters for RTL, ERTL and LTL (extremely helpful for debugging) and the module X86_64, which contains numerous well written tools for producing x86_64 assembly code.
 
 The work I have done was essentially to take an abstract syntax tree as input and produce the corresponding x86_64 assembly code. This task was divided into several steps, each of which targeting a particular problem. In order to explain these steps, I will describe the modules involved on this process as they are used by the compiler.
 
