@@ -1,14 +1,4 @@
 
-(* --------------------------------------------------------------------------------------- *)
-(* Interference Graph                                                                      *)
-(*                                                                                         *) 
-(* The purpose of this step is to build a graph for each function of our program where the *)
-(* vertices are registers (pseudo or not) and the arcs are of two kinds: interference,     *)
-(* expressing that the two ending vertices can't be allocated in the same real register,   *)
-(* and preference, expresssing that it would be prefereable to allocate the two ending     *)
-(* vertices in the same real register, but not required.                                   *)
-(* --------------------------------------------------------------------------------------- *)
-
 type arc =
   | Pref of Register.t * Register.t
   | Intf of Register.t * Register.t

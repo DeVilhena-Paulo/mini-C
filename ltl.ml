@@ -1,11 +1,6 @@
 
 (* ------------------------------------------------------------------------------------ *)
 (* Translation: ERTL -> LTL (Location Transfer Language)                                *)
-(*                                                                                      *)
-(* In this step, we target the problem of register allocation. The problem itself is    *)
-(* solved in three other modules: Kildall, Interference and Coloring. Here we only make *)
-(* sure to respect some restrictions from the assembly x86_64 set of instructions such  *)
-(* as a maximum of one memory access per operation.                                     *)
 (* ------------------------------------------------------------------------------------ *)
 
 (* ------------------------------------------------------------------------------------ *)
@@ -163,8 +158,7 @@ let deffun f =
   let fun_entry = f.Ertltree.fun_entry in
   let fun_body = !graph in
   graph := Label.M.empty;
-  { Ltltree.
-    fun_name; fun_entry; fun_body }
+  { Ltltree.fun_name; fun_entry; fun_body }
              
 
 (* ------------------------------------------------------------------------------------ *)

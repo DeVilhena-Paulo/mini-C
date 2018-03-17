@@ -1,12 +1,6 @@
 
 (* ------------------------------------------------------------------------------------ *)
 (* Operation Selection x86-64                                                           *)
-(*                                                                                      *)
-(* In this step of the compilation process, we define how each expression will be       *)
-(* computed by the compiler. While, we still preserve the abstract syntax structure and *)
-(* we don't indentify the set of instructions from the x86-64 architecture itself , the *)
-(* result at the end of this step is much more similar to the way that the compiler     *)
-(* computes each expression individually.                                               *)
 (* ------------------------------------------------------------------------------------ *)
 
 open Ttree
@@ -104,7 +98,7 @@ let rec pure = function
   | Mload _   -> false
   | Mstore  _ -> false
   | Mbinop (_, e1, e2) -> (pure e1) && (pure e2)
-  | Munop (_, e)       -> pure e
+  | Munop  (_, e)      -> pure e
   | Mcall _   -> false
 
 
@@ -187,7 +181,7 @@ let mkAnd e1 e2 =
      Mconst value
   | Mconst i, (_ as e) | (_ as e), Mconst i ->
      if i = zero then Mconst zero else Munop (Msetnei zero, e)
-  | _ -> Munop (Msetnei zero, mkMul e1 e2)  (* Msetnei implies value between 0 and 1 *)
+  | _ -> Munop (Msetnei zero, mkMul e1 e2)  (* Msetnei implies value equals to 0 or 1 *)
 
 
 let mkOr e1 e2 =
@@ -309,12 +303,7 @@ let op_fun { fun_typ; fun_name; fun_formals; fun_body } =
     | _ -> assert false in
   let fun_locals = S.elements !locals in
   locals := S.empty;
-  {
-    fun_name;
-    fun_formals;
-    fun_locals;
-    fun_body
-  }
+  { fun_name; fun_formals; fun_locals; fun_body }
 
 
 (* ------------------------------------------------------------------------------------ *)
@@ -332,8 +321,8 @@ open Format
 
    
 let print_munop fmt = function
-  | Maddi i   -> fprintf fmt "add $%ld" i
-  | Msetei i  -> fprintf fmt "sete $%ld" i
+  | Maddi   i -> fprintf fmt "add $%ld"   i
+  | Msetei  i -> fprintf fmt "sete $%ld"  i
   | Msetnei i -> fprintf fmt "setne $%ld" i
 
                
@@ -355,7 +344,7 @@ let print_mubranch fmt = function
   | Mjz     -> fprintf fmt "jz"
   | Mjnz    -> fprintf fmt "jnz"
   | Mjlei n -> fprintf fmt "jle $%ld" n
-  | Mjgi n  -> fprintf fmt "jg $%ld" n
+  | Mjgi  n -> fprintf fmt "jg $%ld"  n
 
              
 let print_mbbranch fmt = function

@@ -1,14 +1,7 @@
 
 (* ------------------------------------------------------------------------------------ *)
 (* Translation: RTL -> ERTL                                                             *)
-(*                                                                                      *)
-(* In this step, we add to our sequence of instructions a more realistic treatement of  *)
-(* the memory at three phases of the program: at the beginning of a function, at the    *)
-(* end of a function and at a function call. It's the step where we make the x86-64     *)
-(* calling conventions explict, which explains the E in ERTL (Explicit Register         *)
-(* Transfer Langage).                                                                   *)
 (* ------------------------------------------------------------------------------------ *)
-
 
 (* ------------------------------------------------------------------------------------ *)
 (* Global variables                                                                     *)
@@ -52,7 +45,7 @@ let rec instr { Rtltree.fun_name; fun_entry; fun_exit; fun_formals; _ } = functi
   (* Tail call *)
   | Rtltree.Ecall (r, id, r_list, l) when l = fun_exit && id <> "putchar" && id <> "sbrk" ->
      let n = List.length r_list in
-     (* The gap between actual and next frames *)
+     (* The gap between actual and next frames in number of bytes *)
      let gap = 8 * ((max 6 (List.length fun_formals)) - (max 6 n)) in
      let funcall_l =
        let tail =
@@ -67,7 +60,7 @@ let rec instr { Rtltree.fun_name; fun_entry; fun_exit; fun_formals; _ } = functi
        let l', _ = List.fold_left aux (funcall_l, gap) r_list' in
        generate (Ertltree.Eload (Register.rbp, 0, previous_rbp,
          generate (Ertltree.Eload (Register.rbp, 8, return_address, l')))) in
-     argpass n r_list argpush_l
+     argpass r_list argpush_l
 
   (* Simple call *)
   | Rtltree.Ecall (r, id, r_list, l) ->
@@ -78,14 +71,15 @@ let rec instr { Rtltree.fun_name; fun_entry; fun_exit; fun_formals; _ } = functi
      let copyres_l = generate (Ertltree.Embinop (Ops.Mmov, Register.result, r, unstack_l)) in
      let funcall_l = generate (Ertltree.Ecall (id, min 6 n, copyres_l)) in
      let argpush_l =
+       (* If n <= 6, split returns the empty list and
+          this whole expression evaluates to funcall_l *)
        let r_list' = split (n - 6) (List.rev r_list) in
        List.fold_left (fun l r -> generate (Ertltree.Epush_param (r, l))) funcall_l r_list' in
-     argpass n r_list argpush_l
+     argpass r_list argpush_l
 
-and argpass n r_list l =
-  let m = min 6 n in
-  let aux reg par l' =
-    generate (Ertltree.Embinop (Ops.Mmov, reg, par, l')) in
+and argpass r_list l =
+  let m = min 6 (List.length r_list) in
+  let aux reg par l' = generate (Ertltree.Embinop (Ops.Mmov, reg, par, l')) in
   Ertltree.Egoto (List.fold_right2 aux (split m r_list) (split m Register.parameters) l)
 
 
@@ -150,14 +144,7 @@ let deffun f =
   let fun_locals = !locals in
   let fun_body = !graph in
   graph := Label.M.empty;
-  {
-    Ertltree.
-    fun_name;
-    fun_formals;
-    fun_locals;
-    fun_entry;
-    fun_body
-  }
+  { Ertltree.fun_name; fun_formals; fun_locals; fun_entry; fun_body }
 
 
 (* ------------------------------------------------------------------------------------ *)

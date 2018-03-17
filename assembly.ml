@@ -46,9 +46,6 @@ let linearize_function g fun_entry =
     then begin Hashtbl.add visited l (); instr l (Label.M.find l g) end
     else begin need_label l; emit_wl (jmp (l :> string)) end
 
-  (* ---------------------------------------------------------------------------------- *)
-  (* Translation of an instruction                                                      *)
-  (* ---------------------------------------------------------------------------------- *)
   and instr l i =
     let module Lt = Ltltree in
     
@@ -150,9 +147,6 @@ let deffun { Ltltree.fun_name; fun_entry; fun_body } =
   |> (fun c -> (inline ((fun_name :> string) ^ ":\n")) ++ c)
 
 
-(* ------------------------------------------------------------------------------------ *)
-(* Translation of a program                                                             *)
-(* ------------------------------------------------------------------------------------ *)
-                     
+(* Translation of a program *)
 let program { Ltltree.funs } =
   { text = List.fold_right ( ++ ) ((globl "main") :: (List.map deffun funs)) nop; data = nop }

@@ -1,12 +1,6 @@
 
 (* ------------------------------------------------------------------------------------ *)
 (* The Type System                                                                      *)
-(*                                                                                      *)
-(* Once the parsing is complete, we need to verify the soundness of the program, that   *)
-(* is, if the the program is well typed. To do so, we exploit two notions: rules and    *)
-(* environment. Rules are formal definitions of what needs to be satisfied in order to  *)
-(* check the validity of the next target. Environment is a set of variables, functions  *)
-(* and structures already typed, which can be useful in a future type check             *)
 (* ------------------------------------------------------------------------------------ *)
 
 open Ttree
@@ -282,7 +276,7 @@ let tdecl env = function
        let fun_block = Ptree.Sblock (fun_body) in
        match tbody env fun_typ fun_block with Ttree.Sblock b -> b | _ -> assert false in
      Env.remove_vars env decl_list;
-     Some ({ fun_typ; fun_name; fun_formals; fun_body } : Ttree.decl_fun)
+     Some { Ttree.fun_typ; fun_name; fun_formals; fun_body }
   | Ptree.Dstruct (ident, decl_list) ->
      (* Structure definitions only interfere with updating the environment *)
      Env.add_struct env ident decl_list;

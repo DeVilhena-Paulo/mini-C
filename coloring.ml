@@ -1,11 +1,6 @@
 
 (* --------------------------------------------------------------------------------------- *)
 (* Graph-Coloring Register Allocation                                                      *)
-(*                                                                                         *) 
-(* With the output from the Interference module, we are finally able to replace our pseudo *)
-(* registers by one of the allocatable registers of the machine or by a location on the    *)
-(* stack. The approach implemented here is known as George and Appel iterated register     *)
-(* coalescing algorithm.                                                                   *)
 (* --------------------------------------------------------------------------------------- *)
 
 type color = Ltltree.operand

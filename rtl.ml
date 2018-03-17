@@ -1,12 +1,6 @@
 
 (* ------------------------------------------------------------------------------------ *)
 (* Translation: Ops -> RTL                                                              *)
-(*                                                                                      *)
-(* In this step of the compilation process, we translate the output from the operation  *)
-(* selection step to RTL (Register Transfer Langage), a sequential langague very        *)
-(* similar to assembly in structure, but different in memory management. Indeed, it's   *)
-(* in this step that the abstract syntax structure will be destroyed and will be        *)
-(* replaced by a sequence of instructions operating over infinitely many registers.     *)
 (* ------------------------------------------------------------------------------------ *)
 
 open Ops
